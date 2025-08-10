@@ -316,29 +316,20 @@ class NetJSONGraphRender {
       self.echarts.resize();
     };
 
-    self.echarts.on("graphRoam", () => {
-      const customOptions = self.echarts.getOption();
-      if (
-        customOptions.series[0].zoom >= self.config.showLabelsAtZoomLevel &&
-        !customOptions.series[0].label.show
-      ) {
-        customOptions.series[0].label.show = true;
-        self.echarts.setOption(customOptions, {
-          notMerge: {
-            silent: true,
-          },
-          lazyUpdate: true,
-        });
-      } else if (
-        customOptions.series[0].zoom < self.config.showLabelsAtZoomLevel &&
-        customOptions.series[0].label.show
-      ) {
-        customOptions.series[0].label.show = false;
-        self.echarts.setOption(customOptions, {
-          notMerge: {
-            silent: true,
-          },
-        });
+    // Prevent duplicate handlers if graphRender can be called multiple times
+    self.echarts.off("graphRoam");
+    self.echarts.on("graphRoam", (params) => {
+      const zoom =
+        typeof params.zoom === "number"
+          ? params.zoom
+          : (self.echarts.getOption().series?.[0]?.zoom ?? 0);
+      const shouldShow = zoom >= self.config.showLabelsAtZoomLevel;
+      const currentShow = !!(self.echarts.getOption().series?.[0]?.label?.show);
+      if (shouldShow !== currentShow) {
+        self.echarts.setOption(
+          { series: [{ label: { show: shouldShow } }] },
+          { silent: true, lazyUpdate: true }
+        );
       }
     });
 
