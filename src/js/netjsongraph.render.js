@@ -304,17 +304,12 @@ class NetJSONGraphRender {
    */
   graphRender(JSONData, self) {
     const echartOptions = self.utils.generateGraphOption(JSONData, self);
-    if (echartOptions.series[0].label === undefined) {
-      echartOptions.series[0].label = {};
-    }
-    if (
-      !echartOptions.series[0].zoom ||
-      echartOptions.series[0].zoom < self.config.showLabelsAtZoomLevel
-    ) {
-      echartOptions.series[0].label.show = false;
-    } else {
-      echartOptions.series[0].label.show = true;
-    }
+    const s0 = echartOptions.series[0];
+    // Preserve any existing label object
+    s0.label = s0.label || {};
+    // Treat undefined zoom as 0, then toggle label based on threshold
+    const zoom = typeof s0.zoom === 'number' ? s0.zoom : 0;
+    s0.label.show = zoom >= self.config.showLabelsAtZoomLevel;
     self.utils.echartsSetOption(echartOptions, self);
 
     window.onresize = () => {
