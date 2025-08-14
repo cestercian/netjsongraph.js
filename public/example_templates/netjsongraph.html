@@ -114,6 +114,8 @@
       document.body.appendChild(legends);
 
       graph.render();
+      // Enable node/link selection highlight in graph mode
+      graph.attachHighlight && graph.attachHighlight({ dimOpacity: 0.25, linkWidth: 6 });
     </script>
   </body>
 </html>
