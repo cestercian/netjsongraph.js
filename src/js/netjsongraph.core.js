@@ -1,6 +1,160 @@
 import NetJSONGraphDefaultConfig from "./netjsongraph.config";
 import NetJSONGraphUpdate from "./netjsongraph.update";
 
+class Selection {
+  constructor() {
+    this.selected = new Set();
+  }
+
+  getSetId(item) {
+    if (!item) return undefined;
+    if (item.node) {
+      return item.node.id;
+    }
+    if (item.link) {
+      return `${item.link.source}=>${item.link.target}`;
+    }
+    if (item.id) {
+      return item.id;
+    }
+    if (item.source !== undefined && item.target !== undefined) {
+      return `${item.source}=>${item.target}`;
+    }
+    return undefined;
+  }
+
+  isSelected(item) {
+    const id = this.getSetId(item);
+    return id !== undefined && this.selected.has(id);
+  }
+
+  toggleSelection(item) {
+    const id = this.getSetId(item);
+    if (id === undefined) return false;
+    if (this.selected.has(id)) {
+      this.selected.delete(id);
+      return false;
+    }
+    this.selected.add(id);
+    return true;
+  }
+
+  clear() {
+    this.selected.clear();
+  }
+
+  changeSelection(echarts, params) {
+    if (!params) return;
+    const zrEvt = params.event || {};
+    const nativeEvt = zrEvt.event || zrEvt;
+    const multiSelectKey = !!(nativeEvt && (nativeEvt.ctrlKey || nativeEvt.metaKey));
+
+    const option = echarts.getOption ? echarts.getOption() : {};
+    const isGraph = params.componentSubType === "graph";
+
+    const highlightOne = () => {
+      if (isGraph) {
+        echarts.dispatchAction({
+          type: "highlight",
+          seriesIndex: 0,
+          dataType: params.dataType,
+          dataIndex: params.dataIndex,
+        });
+      } else {
+        const seriesIndex = params.componentSubType === "lines" ? 1 : 0;
+        echarts.dispatchAction({
+          type: "highlight",
+          seriesIndex,
+          dataIndex: params.dataIndex,
+        });
+      }
+    };
+
+    const downplayOne = () => {
+      if (isGraph) {
+        echarts.dispatchAction({
+          type: "downplay",
+          seriesIndex: 0,
+          dataType: params.dataType,
+          dataIndex: params.dataIndex,
+        });
+      } else {
+        const seriesIndex = params.componentSubType === "lines" ? 1 : 0;
+        echarts.dispatchAction({
+          type: "downplay",
+          seriesIndex,
+          dataIndex: params.dataIndex,
+        });
+      }
+    };
+
+    const downplayAll = () => {
+      if (isGraph) {
+        echarts.dispatchAction({type: "downplay", seriesIndex: 0, dataType: "node"});
+        echarts.dispatchAction({type: "downplay", seriesIndex: 0, dataType: "edge"});
+      } else {
+        echarts.dispatchAction({type: "downplay", seriesIndex: 0}); // nodes
+        echarts.dispatchAction({type: "downplay", seriesIndex: 1}); // links
+      }
+    };
+
+    if (multiSelectKey) {
+      const turnedOn = this.toggleSelection(params.data || {});
+      if (turnedOn) highlightOne();
+      else downplayOne();
+      return;
+    }
+
+    // Single-select behavior: clear and select the clicked item
+    if (this.selected.size > 0) {
+      downplayAll();
+      this.clear();
+    }
+    this.toggleSelection(params.data || {});
+    highlightOne();
+  }
+
+  // Re-apply highlights after re-render or mode switch
+  highlightSelected(echarts) {
+    const option = echarts.getOption ? echarts.getOption() : {};
+    const series = option.series || [];
+    if (!series.length) return;
+
+    const isGraph = !!(series[0] && (series[0].type === "graph" || series[0].type === "graphGL"));
+    if (isGraph) {
+      const nodes = series[0].nodes || [];
+      const links = series[0].links || [];
+      const nodeIndexes = nodes
+        .map((item, idx) => (this.isSelected(item) ? idx : -1))
+        .filter((i) => i >= 0);
+      const linkIndexes = links
+        .map((item, idx) => (this.isSelected(item) ? idx : -1))
+        .filter((i) => i >= 0);
+      if (nodeIndexes.length)
+        echarts.dispatchAction({type: "highlight", seriesIndex: 0, dataType: "node", dataIndex: nodeIndexes});
+      if (linkIndexes.length)
+        echarts.dispatchAction({type: "highlight", seriesIndex: 0, dataType: "edge", dataIndex: linkIndexes});
+      return;
+    }
+
+    // Map mode: series[0] nodes scatter, series[1] lines
+    const nodeSeries = series[0] || {};
+    const edgeSeries = series[1] || {};
+    const nodes = (nodeSeries.data || []).map((d) => (d && d.node ? d : null));
+    const links = (edgeSeries.data || []).map((d) => (d && d.link ? d : null));
+    const nodeIndexes = nodes
+      .map((item, idx) => (item && this.isSelected(item) ? idx : -1))
+      .filter((i) => i >= 0);
+    const linkIndexes = links
+      .map((item, idx) => (item && this.isSelected(item) ? idx : -1))
+      .filter((i) => i >= 0);
+    if (nodeIndexes.length)
+      echarts.dispatchAction({type: "highlight", seriesIndex: 0, dataIndex: nodeIndexes});
+    if (linkIndexes.length)
+      echarts.dispatchAction({type: "highlight", seriesIndex: 1, dataIndex: linkIndexes});
+  }
+}
+
 class NetJSONGraph {
   /**
    * @constructor
@@ -10,6 +164,7 @@ class NetJSONGraph {
    */
   constructor(JSONParam) {
     this.utils = new NetJSONGraphUpdate();
+    this.selection = new Selection();
     this.config = {...NetJSONGraphDefaultConfig};
     this.JSONParam = this.utils.isArray(JSONParam) ? JSONParam : [JSONParam];
   }

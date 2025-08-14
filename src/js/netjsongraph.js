@@ -2,7 +2,6 @@ import NetJSONGraphCore from "./netjsongraph.core";
 import {NetJSONGraphRender, echarts, L} from "./netjsongraph.render";
 import registerLeafletSystem from "../../lib/js/echarts-leaflet/index";
 import NetJSONGraphGUI from "./netjsongraph.gui";
-import attachHighlight from "./netjsongraph.highlight";
 
 const colorTool = require("zrender/lib/tool/color");
 const {each} = require("zrender/lib/core/util");
@@ -59,8 +58,6 @@ class NetJSONGraph {
     this.graph.utils = new NetJSONGraphRender();
     this.graph.setUtils();
     this.graph.event = this.graph.utils.createEvent();
-    // Expose helper to attach node/link selection highlight for examples or apps
-    this.graph.attachHighlight = (opts) => attachHighlight(this.graph, opts);
   }
 
   /**
@@ -118,6 +115,7 @@ class NetJSONGraph {
    * @returns {Object} - The graph configuration.
    */
   onLoad() {
+    this.utils.echartsSetEventHandler(this);
     if (this.config.metadata && this.utils.isNetJSON(this.data)) {
       this.gui.createMetaInfoContainer(this.graph);
       this.utils.updateMetadata.call(this);
@@ -154,6 +152,7 @@ class NetJSONGraph {
           document.querySelector(".leaflet-control-zoom").style.display =
             "block";
         }
+        this.selection.highlightSelected(this.echarts);
       };
     }
     this.utils.hideLoading.call(this);
