@@ -12,6 +12,7 @@
     "coveralls": "jest --silent -f ./coverage/lcov.info && cat ./coverage/lcov.info | coveralls || echo 'no coverage file found'",
     "precommit": "lint-staged",
     "lint": "eslint '**/*.js'",
+    "format": "prettier --write .",
     "lint:fix": "eslint '**/*.js' --fix"
   },
   "lint-staged": {
