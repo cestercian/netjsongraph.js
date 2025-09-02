@@ -33,6 +33,7 @@ export const getDriver = async () => {
 export const urls = {
   basicUsage: `${url}/examples/netjsongraph.html`,
   geographicMap: `${url}/examples/netjsonmap.html`,
+  indoorMap: `${url}/examples/netjsonmap-indoormap.html`,
 };
 
 export const getElementByCss = async (driver, css, waitTime = 1000) => {
@@ -110,7 +111,10 @@ export const getPresentNodesAndLinksCount = async (example) => {
     throw new Error("Invalid example type");
   }
   const data = mapping[example];
-  return {nodesPresent: data.nodes.length, linksPresent: data.links.length};
+  return {
+    nodesPresent: data.nodes.length,
+    linksPresent: data.links.length,
+  };
 };
 
 export const captureConsoleErrors = async (driver) => {
