@@ -440,23 +440,21 @@ class NetJSONGraphRender {
       self.config.geoOptions,
     );
 
-    // Render Polygon and MultiPolygon features from the original GeoJSON data.
-    // While nodes (Points) and links (LineStrings) are handled by ECharts,
-    // polygon features are rendered directly onto the Leaflet map using
-    // a separate L.geoJSON layer. This allows for displaying geographical
-    // areas like parks or districts alongside the network topology.
-    if (self.originalGeoJSON) {
-      addPolygonOverlays(self);
-      // Auto-fit view to encompass ALL geometries (polygons + nodes)
-      let bounds = null;
+    if (self.type === "geojson") {
+      self.leaflet.geoJSON = L.geoJSON(self.data, self.config.geoOptions);
 
-      // 1. Polygon overlays (if any)
-      if (
-        self.leaflet.polygonGeoJSON &&
-        typeof self.leaflet.polygonGeoJSON.getBounds === "function"
-      ) {
-        bounds = self.leaflet.polygonGeoJSON.getBounds();
-      }
+      // Check if clustering should be applied based on current zoom level and configuration
+      const needsClustering =
+        self.config.clustering &&
+        self.leaflet.getZoom() < self.config.disableClusteringAtLevel;
+
+      if (needsClustering) {
+        const clusterOptions = {
+          showCoverageOnHover: false,
+          spiderfyOnMaxZoom: false,
+          maxClusterRadius: self.config.clusterRadius,
+          disableClusteringAtZoom: self.config.disableClusteringAtLevel,
+        };
 
       // 2. Nodes (Points)
       if (JSONData.nodes && JSONData.nodes.length) {
