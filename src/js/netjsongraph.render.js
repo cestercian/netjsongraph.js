@@ -427,16 +427,18 @@ class NetJSONGraphRender {
     // Toggle labels on zoom threshold crossing
     if (self.config.showGraphLabelsAtZoom > 0) {
       self.echarts.on("graphRoam", (params) => {
-        if (!params || !params.zoom) return;
+        if (!params || !params.zoom) {
+          return;
+        }
         const option = self.echarts.getOption();
-        const show =
+        const labelsVisible =
           option &&
           option.series &&
           option.series[0] &&
           option.series[0].zoom >= self.config.showGraphLabelsAtZoom;
-        if (show !== self.LabelShow) {
+        if (labelsVisible !== self._labelsVisible) {
           self.echarts.resize({animation: false, silent: true});
-          self.LabelShow = show;
+          self._labelsVisible = labelsVisible;
         }
       });
     }
